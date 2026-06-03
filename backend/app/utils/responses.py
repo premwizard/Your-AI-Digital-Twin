@@ -1,7 +1,8 @@
 from flask import jsonify
+from typing import Optional
 
 
-def api_response(data=None, message: str = "", error: str | None = None, status: int = 200):
+def api_response(data=None, message: str = "", error: Optional[str] = None, status: int = 200):
     body = {"success": status < 400, "message": message}
     if data is not None:
         body["data"] = data

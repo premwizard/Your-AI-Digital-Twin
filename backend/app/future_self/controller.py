@@ -1,7 +1,7 @@
 from datetime import datetime
 from app.core.db import mongo
 from app.models.future_profile import build_future_profile
-from app.services.llm import build_prompt, call_ollama
+from app.services.llm import call_ollama
 from app.utils.responses import api_response
 
 

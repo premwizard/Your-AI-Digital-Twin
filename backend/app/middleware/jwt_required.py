@@ -1,20 +1,24 @@
 from functools import wraps
-from flask import request, jsonify
+from flask import request
 import jwt
 from app.core.config import Config
+from app.utils.responses import api_response
+
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = None
-        if "Authorization" in request.headers:
-            token = request.headers["Authorization"].split(" ")[1]
-        if not token:
-            return jsonify({"error": "Token missing"}), 403
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return api_response(error="Missing or invalid Authorization header", status=401)
+
+        token = auth_header.split(" ", 1)[1]
         try:
             data = jwt.decode(token, Config.SECRET_KEY, algorithms=["HS256"])
-            current_user = data  # can also load from DB if needed
-        except:
-            return jsonify({"error": "Invalid token"}), 401
-        return f(current_user, *args, **kwargs)
+        except jwt.ExpiredSignatureError:
+            return api_response(error="Token expired", status=401)
+        except jwt.InvalidTokenError:
+            return api_response(error="Invalid token", status=401)
+
+        return f(data, *args, **kwargs)
     return decorated

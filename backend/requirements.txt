@@ -1,0 +1,8 @@
+Flask>=2.0
+Flask-Cors>=3.0
+Flask-PyMongo>=2.3
+PyJWT>=2.0
+Werkzeug>=2.0
+pymongo>=4.0
+ollama>=0.0.1
+python-dotenv>=1.0

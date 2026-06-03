@@ -1,36 +1,27 @@
-from flask import jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from app.core.db import mongo
-import jwt, datetime
-from app.core.config import Config
+from flask import request
+from .service import register_user as auth_register_user, login_user as auth_login_user, refresh_token as auth_refresh_token
+from .schemas import validate_register_payload, validate_login_payload
+from app.utils.responses import api_response
+
 
 def register_user(request):
-    data = request.get_json()
-    user = mongo.db.users.find_one({"email": data["email"]})
-    if user:
-        return jsonify({"error": "User already exists"}), 400
+    payload = request.get_json(silent=True)
+    errors = validate_register_payload(payload or {})
+    if errors:
+        return api_response(error=", ".join(errors), status=400)
+    return auth_register_user(payload)
 
-    hashed_pw = generate_password_hash(data["password"])
-    new_user = {
-        "username": data["username"],
-        "email": data["email"],
-        "password": hashed_pw,
-        "role": "user",
-        "createdAt": datetime.datetime.utcnow()
-    }
-    mongo.db.users.insert_one(new_user)
-    return jsonify({"message": "Registered successfully"}), 201
 
 def login_user(request):
-    data = request.get_json()
-    user = mongo.db.users.find_one({"email": data["email"]})
-    if not user or not check_password_hash(user["password"], data["password"]):
-        return jsonify({"error": "Invalid credentials"}), 401
+    payload = request.get_json(silent=True)
+    errors = validate_login_payload(payload or {})
+    if errors:
+        return api_response(error=", ".join(errors), status=400)
+    return auth_login_user(payload)
 
-    token = jwt.encode({
-        "user_id": str(user["_id"]),
-        "role": user["role"],
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-    }, Config.SECRET_KEY, algorithm="HS256")
 
-    return jsonify({"token": token})
+def refresh_access_token(request):
+    payload = request.get_json(silent=True)
+    if not payload or not payload.get("refresh_token"):
+        return api_response(error="refresh_token is required", status=400)
+    return auth_refresh_token(payload["refresh_token"])

@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict
+from bson import ObjectId
 from app.core.db import mongo
 from app.models.training_document import build_training_document
 from app.utils.responses import api_response
@@ -24,7 +25,12 @@ def process_document(current_user: Dict, payload: Dict):
     if not payload or not payload.get("document_id"):
         return api_response(error="document_id is required", status=400)
 
-    document = mongo.db.training_documents.find_one({"_id": payload.get("document_id"), "user_id": current_user["user_id"]})
+    try:
+        document_id = ObjectId(payload.get("document_id"))
+    except Exception:
+        return api_response(error="Invalid document_id", status=400)
+
+    document = mongo.db.training_documents.find_one({"_id": document_id, "user_id": current_user["user_id"]})
     if not document:
         return api_response(error="Document not found", status=404)
 

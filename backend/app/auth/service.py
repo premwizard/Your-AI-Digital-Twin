@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Dict, Optional
 
 import jwt
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -49,14 +49,16 @@ def register_user(payload: Dict):
     return api_response(message="Registered successfully", data={"user_id": str(result.inserted_id)}, status=201)
 
 
-def create_access_token(payload: Dict, expires_delta: timedelta | None = None) -> str:
+from typing import Optional
+
+def create_access_token(payload: Dict, expires_delta: Optional[timedelta] = None) -> str:
     payload_copy = payload.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(hours=1))
     payload_copy.update({"exp": expire})
     return jwt.encode(payload_copy, Config.SECRET_KEY, algorithm="HS256")
 
 
-def create_refresh_token(payload: Dict, expires_delta: timedelta | None = None) -> str:
+def create_refresh_token(payload: Dict, expires_delta: Optional[timedelta] = None) -> str:
     payload_copy = payload.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(days=30))
     payload_copy.update({"exp": expire})
