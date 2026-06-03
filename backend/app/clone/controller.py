@@ -23,5 +23,6 @@ def respond(current_user):
     if not payload or not payload.get("prompt"):
         return api_response(error="Prompt is required", status=400)
 
-    answer = generate_clone_response(current_user["user_id"], payload["prompt"])
+    mode = payload.get("mode", "normal")
+    answer = generate_clone_response(current_user["user_id"], payload["prompt"], mode=mode)
     return api_response(message="Response generated", data={"reply": answer})

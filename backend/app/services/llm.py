@@ -37,25 +37,27 @@ def call_ollama(prompt: str, context: Optional[List[Dict[str, str]]] = None) -> 
         raise
 
 
-def build_prompt(personality: Dict, memories: List[Dict], documents: List[Dict], user_message: str) -> str:
-    lines = ["You are an AI digital twin that must mirror the user's profile and memory."]
-    if personality:
-        lines.append("Personality and preferences:")
-        lines.append(f"- Personality Type: {personality.get('personality_type')}")
-        lines.append(f"- Communication Style: {personality.get('communication_style')}")
-        lines.append(f"- Career Interests: {', '.join(personality.get('career_interests', []))}")
-        lines.append(f"- Goals: {', '.join(personality.get('goals', []))}")
-        lines.append(f"- Strengths: {', '.join(personality.get('strengths', []))}")
-        lines.append(f"- Weaknesses: {', '.join(personality.get('weaknesses', []))}")
-        lines.append(f"- Skills: {', '.join(personality.get('skills', []))}")
-    if memories:
-        lines.append("Relevant memories:")
-        for memory in memories[:5]:
-            lines.append(f"- {memory.get('title')}: {memory.get('content')}")
-    if documents:
-        lines.append("Training data summary:")
-        for doc in documents[:3]:
-            lines.append(f"- {doc.get('title', 'Document')}: {doc.get('content', '')[:120]}...")
-    lines.append("Use this context to answer the user's request.")
-    lines.append(f"User message: {user_message}")
-    return "\n".join(lines)
+def build_brain_prompt(context: str, user_message: str) -> str:
+    prompt_parts = [
+        "The text below contains the user's personality, memories, goals, documents, and recent conversations.",
+        "Use this material to respond exactly like the user would, not like a generic assistant.",
+        "If the user's preferences or experiences are mentioned, include them in the response in a natural way.",
+        "Avoid generic AI phrasing such as 'As an AI' or 'I am a language model.'",
+        "--- Context ---",
+        context,
+        "--- User Query ---",
+        user_message,
+        "--- Response Requirements ---",
+        "- Answer in the user's voice.",
+        "- Reference relevant memories and training documents when appropriate.",
+        "- Keep the response personalized, concise, and practical.",
+        "- Include career goals and future self perspective when applicable.",
+    ]
+    return "\n".join(prompt_parts)
+
+
+def build_messages(context: str, user_message: str) -> List[Dict[str, str]]:
+    return [
+        {"role": "system", "content": context},
+        {"role": "user", "content": user_message},
+    ]

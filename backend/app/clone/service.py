@@ -1,12 +1,21 @@
 from datetime import datetime
 from typing import Dict, List
-from bson.objectid import ObjectId
+from bson import ObjectId
 
 from app.core.db import mongo
 from app.models.personality_profile import build_personality_profile
 from app.models.conversation_history import build_conversation_history
-from app.services.llm import build_prompt, call_ollama
-from app.rag.context_builder import assemble_context
+from app.services.llm import call_ollama, build_brain_prompt
+from app.services.personality import load_personality_profile
+from app.services.memory import (
+    load_recent_memories,
+    load_conversation_history,
+    summarize_conversations,
+    build_conversation_summary,
+)
+from app.services.training import load_processed_documents
+from app.services.future_self import load_future_profile
+from app.services.context_builder import build_context
 
 
 def save_personality_profile(user_id: str, payload: Dict) -> Dict:
@@ -25,23 +34,40 @@ def get_personality_profile(user_id: str) -> Dict:
     return mongo.db.personality_profiles.find_one({"user_id": user_id}) or {}
 
 
-def record_conversation(user_id: str, request_prompt: str, reply_text: str) -> None:
+def record_conversation(user_id: str, request_prompt: str, reply_text: str, mode: str) -> None:
     conversation = build_conversation_history(user_id, {
-        "conversation_type": "clone_chat",
-        "messages": [{"role": "user", "content": request_prompt}, {"role": "assistant", "content": reply_text}],
-        "summary": reply_text,
+        "conversation_type": f"clone_{mode}",
+        "messages": [
+            {"role": "user", "content": request_prompt},
+            {"role": "assistant", "content": reply_text},
+        ],
+        "summary": build_conversation_summary(request_prompt, reply_text),
+        "metadata": {"mode": mode},
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     })
     mongo.db.conversation_history.insert_one(conversation)
 
 
-def generate_clone_response(user_id: str, user_prompt: str) -> str:
-    personality = get_personality_profile(user_id)
-    memories = list(mongo.db.memories.find({"user_id": user_id}).sort("created_at", -1).limit(10))
-    training_documents = list(mongo.db.training_documents.find({"user_id": user_id, "processed": True}).limit(5))
-    context = assemble_context(personality, memories, training_documents)
-    prompt = build_prompt(personality, memories, training_documents, user_prompt)
-    answer = call_ollama(prompt, context=[{"role": "system", "content": context}])
-    record_conversation(user_id, user_prompt, answer)
+def generate_clone_response(user_id: str, user_prompt: str, mode: str = "normal") -> str:
+    personality = load_personality_profile(user_id)
+    memories = load_recent_memories(user_id, limit=10)
+    training_documents = load_processed_documents(user_id, limit=5)
+    future_profile = load_future_profile(user_id)
+    conversations = load_conversation_history(user_id, limit=4)
+    conversation_summary = summarize_conversations(conversations)
+
+    context = build_context(
+        personality=personality,
+        memories=memories,
+        documents=training_documents,
+        future_profile=future_profile,
+        conversation_summary=conversation_summary,
+        mode=mode,
+        user_message=user_prompt,
+    )
+
+    prompt = build_brain_prompt(context, user_prompt)
+    answer = call_ollama(prompt)
+    record_conversation(user_id, user_prompt, answer, mode)
     return answer

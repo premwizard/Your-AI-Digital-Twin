@@ -1,7 +1,7 @@
 from datetime import datetime
 from app.core.db import mongo
 from app.models.future_profile import build_future_profile
-from app.services.llm import call_ollama
+from app.clone.service import generate_clone_response
 from app.utils.responses import api_response
 
 
@@ -23,16 +23,8 @@ def get_future_profile(current_user):
 
 
 def chat_future_self(current_user, payload):
-    profile = mongo.db.future_profiles.find_one({"user_id": current_user["user_id"]})
-    if not profile:
-        return api_response(error="Future profile not defined", status=404)
+    if not payload or not payload.get("prompt"):
+        return api_response(error="Prompt is required", status=400)
 
-    prompt = (
-        f"You are the user's future self. Target role: {profile.get('target_role')}.",
-        f"Timeline: {profile.get('timeline')}.",
-        f"Career goals: {', '.join(profile.get('career_goals', []))}.",
-        f"User asks: {payload['prompt']}"
-    )
-
-    answer = call_ollama("\n".join(prompt))
+    answer = generate_clone_response(current_user["user_id"], payload["prompt"], mode="future")
     return api_response(message="Future self response generated", data={"reply": answer})
