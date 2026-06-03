@@ -8,7 +8,9 @@ The backend supports:
 - user authentication with JWT and refresh tokens
 - personality profile management
 - long-term memory storage and retrieval
-- training document ingestion and processing
+- training document ingestion and processing with RAG (Retrieval-Augmented Generation)
+- semantic search over document embeddings
+- automatic context injection from relevant documents
 - interview simulation and feedback
 - future self projection
 - analytics and usage reporting
@@ -67,6 +69,7 @@ backend/
       personality_profile.py
       memory.py
       training_document.py
+      document_chunk.py
       conversation_history.py
       interview_session.py
       future_profile.py
@@ -74,6 +77,14 @@ backend/
     services/
       __init__.py
       llm.py
+      personality.py
+      memory.py
+      training.py
+      future_self.py
+      context_builder.py
+      embeddings.py
+      document_processor.py
+      retrieval.py
     utils/
       __init__.py
       logger.py
@@ -89,10 +100,12 @@ backend/
 - **Personality Profile Engine**: stores personality type, communication style, goals, strengths, weaknesses, skills, and preferences.
 - **Long-Term Memory System**: stores memories, project notes, goals, and conversation history for later retrieval.
 - **Clone Training System**: accepts resume/bio/project data and stores processed training documents.
+- **RAG (Retrieval-Augmented Generation)**: automatically chunks and embeds documents for semantic search; retrieves relevant excerpts before generating responses.
 - **Interview Simulator**: supports HR, technical, and behavioral interview session storage with feedback.
 - **Future Self Mode**: creates a future persona based on career goals and timeline.
-- **Enhanced Chat System**: builds context from profile, memories, and training data before sending enriched prompts to the LLM.
+- **Enhanced Chat System**: builds context from profile, memories, documents, and RAG retrieval before sending enriched prompts to the LLM.
 - **Analytics API**: returns counts for conversations, memories, training documents, and interview sessions.
+- **AI Brain System**: personality injection, memory awareness, training data integration, and goal-aware responses.
 
 ## Tech Stack
 
@@ -105,6 +118,8 @@ backend/
 - PyJWT
 - Ollama
 - Werkzeug
+- sentence-transformers (RAG embeddings)
+- numpy (vector operations)
 
 ## API Endpoints
 
@@ -117,7 +132,9 @@ backend/
 - `GET /api/memory`
 - `POST /api/memory`
 - `POST /api/training/upload`
-- `POST /api/training/process`
+- `GET /api/training/list`
+- `POST /api/training/process` (with RAG chunking and embeddings)
+- `DELETE /api/training/<document_id>`
 - `POST /api/training/train`
 - `POST /api/interview/start`
 - `GET /api/interview/sessions`
@@ -144,3 +161,4 @@ backend/
 - The backend preserves existing user authentication and Ollama-powered response generation while extending the architecture to support AI digital twin workflows.
 - Use `backend/app.py` as the Flask entrypoint.
 - Load environment variables from `.env.example` and install dependencies from `backend/requirements.txt`.
+- See [RAG_DOCUMENTATION.md](backend/RAG_DOCUMENTATION.md) for detailed information on the Retrieval-Augmented Generation system.

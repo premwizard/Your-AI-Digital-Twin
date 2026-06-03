@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 from app.services.personality import personality_brief, personality_tone
 from app.services.memory import summarize_memories, summarize_conversations, compact_text
 from app.services.future_self import future_profile_brief
+from app.services.retrieval import retrieve_relevant_chunks
 
 
 def build_context(
@@ -12,6 +13,7 @@ def build_context(
     conversation_summary: str,
     mode: str,
     user_message: str,
+    user_id: str = None,
 ) -> str:
     sections = [
         "You are a digital twin AI that must behave like the user, not a generic assistant.",
@@ -42,6 +44,13 @@ def build_context(
             content = document.get("summary", document.get("content", "")).replace("\n", " ")
             sections.append(f"{document.get('title', 'Document')} ({document.get('document_type', 'unknown')}): {content[:220]}")
 
+    if user_id:
+        retrieved_chunks = retrieve_relevant_chunks(user_id, user_message, limit=5, threshold=0.25)
+        if retrieved_chunks:
+            sections.append("--- Relevant Document Excerpts (RAG) ---")
+            for chunk in retrieved_chunks:
+                sections.append(f"[{chunk.get('metadata', {}).get('title', 'Document')}] {chunk.get('chunk_text', '')[:280]}")
+
     mode_instruction = _select_mode_instruction(mode)
     if mode_instruction:
         sections.append("--- Response Guidelines ---")
@@ -52,7 +61,7 @@ def build_context(
     sections.append("--- End Context ---")
 
     context = "\n".join(sections)
-    return compact_text(context)
+    return compact_text(context, max_chars=3000)
 
 
 def _select_mode_instruction(mode: str) -> Optional[str]:

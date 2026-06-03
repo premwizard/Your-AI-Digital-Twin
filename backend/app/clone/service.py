@@ -65,6 +65,7 @@ def generate_clone_response(user_id: str, user_prompt: str, mode: str = "normal"
         conversation_summary=conversation_summary,
         mode=mode,
         user_message=user_prompt,
+        user_id=user_id,
     )
 
     prompt = build_brain_prompt(context, user_prompt)
